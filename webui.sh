@@ -6,15 +6,18 @@ MODEL_PATH="/data/lama3/Meta-Llama-3-8B-Instruct"
 GRADIO_PORT=7860
 GPU="1"  # 默认使用第一个GPU
 LOAD_8BIT=false  # 默认不加载8位模式
+AUTH="./auth"
 
 # 接受命令行参数
-while getopts "m:p:g:l" opt; do
+while getopts "m:p:g:a:l" opt; do
   case $opt in
     m) MODEL_PATH="$OPTARG"
     ;;
     p) GRADIO_PORT="$OPTARG"
     ;;
     g) GPU="$OPTARG"
+    ;;
+    a) AUTH="$OPTARG"
     ;;
     l) LOAD_8BIT=true
     ;;
@@ -66,5 +69,7 @@ nohup python3 -m fastchat.serve.openai_api_server --host localhost --port $API_P
 echo "API server running on port $API_PORT"
 
 # webui
-python3 -m fastchat.serve.gradio_web_server --port $GRADIO_PORT
+nohup python3 -m fastchat.serve.gradio_web_server --port $GRADIO_PORT --gradio-auth-path $AUTH > logs/web_server.log 2>&1 &
+echo "Web server running on port $GRADIO_PORT, auth is $AUTH"
+
 
