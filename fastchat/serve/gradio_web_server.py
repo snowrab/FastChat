@@ -63,6 +63,8 @@ controller_url = None
 enable_moderation = False
 use_remote_storage = False
 
+script_dir = '/'.join(os.path.abspath(__file__).split('/')[:-1])
+
 acknowledgment_md = """
 ### Terms of Service
 
@@ -150,11 +152,12 @@ class State:
         return base
 
 
-def set_global_vars(controller_url_, enable_moderation_, use_remote_storage_):
-    global controller_url, enable_moderation, use_remote_storage
+def set_global_vars(controller_url_, enable_moderation_, use_remote_storage_, predefined_prompts_):
+    global controller_url, enable_moderation, use_remote_storage, predefined_prompts
     controller_url = controller_url_
     enable_moderation = enable_moderation_
     use_remote_storage = use_remote_storage_
+    predefined_prompts = predefined_prompts_
 
 
 def get_conv_log_filename(is_vision=False, has_csam_image=False):
@@ -863,6 +866,18 @@ def build_single_model_ui(models, add_promotion_links=False):
         regenerate_btn = gr.Button(value="🔄  Regenerate", interactive=False)
         clear_btn = gr.Button(value="🗑️  Clear history", interactive=False)
 
+    prompt_file = os.path.join(script_dir,"../..", predefined_prompts)
+    with open(prompt_file, "r") as file:
+        predefined_texts = file.read().splitlines()
+    with gr.Row():
+        predefined_text_selector = gr.Dropdown(
+            choices=predefined_texts,
+            label="Select a predefined prompt",
+            interactive=True,
+            elem_id="predefined_text_selector",
+        )
+        submit_predefined_btn = gr.Button(value="Submit predefined prompt", elem_id="submit_predefined_btn")
+
     with gr.Accordion("Parameters", open=False) as parameter_row:
         temperature = gr.Slider(
             minimum=0.0,
@@ -931,6 +946,15 @@ def build_single_model_ui(models, add_promotion_links=False):
         add_text,
         [state, model_selector, textbox],
         [state, chatbot, textbox] + btn_list,
+    ).then(
+        bot_response,
+        [state, temperature, top_p, max_output_tokens],
+        [state, chatbot] + btn_list,
+    )
+    submit_predefined_btn.click(
+        add_text, 
+        inputs=[state, model_selector, predefined_text_selector, imagebox],
+        outputs=[state, chatbot, textbox, imagebox] + btn_list
     ).then(
         bot_response,
         [state, temperature, top_p, max_output_tokens],
@@ -1030,11 +1054,17 @@ if __name__ == "__main__":
         default=False,
         help="Uploads image files to google cloud storage if set to true",
     )
+    parser.add_argument(
+        "--predefined-prompts",
+        type=str,
+        default='prompt.txt',
+        help="Predefined prompts file",
+    )
     args = parser.parse_args()
     logger.info(f"args: {args}")
 
     # Set global variables
-    set_global_vars(args.controller_url, args.moderate, args.use_remote_storage)
+    set_global_vars(args.controller_url, args.moderate, args.use_remote_storage, args.predefined_prompts)
     models, all_models = get_model_list(
         args.controller_url, args.register_api_endpoint_file, vision_arena=False
     )
