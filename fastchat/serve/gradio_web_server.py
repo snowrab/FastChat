@@ -953,8 +953,8 @@ def build_single_model_ui(models, add_promotion_links=False):
     )
     submit_predefined_btn.click(
         add_text, 
-        inputs=[state, model_selector, predefined_text_selector, imagebox],
-        outputs=[state, chatbot, textbox, imagebox] + btn_list
+        inputs=[state, model_selector, predefined_text_selector],
+        outputs=[state, chatbot, textbox] + btn_list
     ).then(
         bot_response,
         [state, temperature, top_p, max_output_tokens],
